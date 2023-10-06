@@ -1,0 +1,4 @@
+moviepy
+pillow>=10.0.0
+pygemstones
+numpy

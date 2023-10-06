@@ -1,0 +1,152 @@
+name: Movie Generated From Ai
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'extras/images/**'
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { name: "Linux", os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install System Packages
+        run: |
+          sudo add-apt-repository multiverse
+          sudo apt update
+          sudo apt install ubuntu-restricted-extras -y
+          sudo apt install ffmpeg -y
+          sudo apt install imagemagick -y
+          sudo apt install libavcodec-extra -y
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Upgrade PIP
+        run: python3 -m pip install --upgrade pip setuptools wheel
+
+      - name: Python Requirements
+        run: |
+          python3 -m pip install -r requirements.txt --user
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$HOME/Library/Python/3.10/bin" >> $GITHUB_PATH
+
+      - name: Versions
+        run: |
+          python3 --version
+          python3 -m pip --version
+          python3 -c "import PIL;print(PIL.__version__)"
+          convert -version
+
+      - name: Download Sample Video
+        run: |
+          mkdir -p temp
+          curl https://paulo-storage.s3.amazonaws.com/trash/movie-for-transcript.mp4 -o temp/movie.mp4
+
+      - name: Extract Audio
+        run: python3 extract.py
+
+      - name: Transcript (speech to text)
+        run: |
+          python3 -m pip install whisper-ctranslate2
+          python3 transcript-whisper.py
+
+      - name: Generate Final Movie
+        run: python3 generate.py
+
+      - name: Speed Up Movie
+        run: |
+          ffmpeg -i temp/movie-out.mp4 -filter_complex "[0:v]setpts=0.8333*PTS[v];[0:a]atempo=1.2[a]" -map "[v]" -map "[a]" -c:a mp3 temp/movie_1_2x_with_audio.mp4
+          mv temp/movie_1_2x_with_audio.mp4 temp/movie-out.mp4
+
+      - name: Upload movie.mp4 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: movie
+          path: temp/movie.mp4
+
+      - name: Upload movie-out.mp4 Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: movie-out
+          path: temp/movie-out.mp4
+
+      - name: Upload transcript.txt Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: transcript
+          path: temp/transcript.txt
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download movie Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: movie
+          path: temp/
+
+      - name: Download movie-out Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: movie-out
+          path: temp/
+
+      - name: Download transcript Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: transcript
+          path: temp/
+
+      - name: Get Release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload movie.mp4 Release Asset
+        id: upload-movie-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: temp/movie.mp4
+          asset_name: movie.mp4
+          asset_content_type: video/mp4
+
+      - name: Upload movie-out.mp4 Release Asset
+        id: upload-movie-out-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: temp/movie-out.mp4
+          asset_name: movie-out.mp4
+          asset_content_type: video/mp4
+
+      - name: Upload transcript.txt Release Asset
+        id: upload-transcript-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: temp/transcript.txt
+          asset_name: transcript.txt
+          asset_content_type: text/plain
