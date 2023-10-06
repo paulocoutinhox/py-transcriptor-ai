@@ -1,6 +1,6 @@
 # PyTranscriptorAi - Transcript videos to text with Ai and add subtitles
 
-[![Movie Generated From Ai](https://github.com/paulocoutinhox/py-transcript-video/actions/workflows/build.yml/badge.svg)](https://github.com/paulocoutinhox/py-transcript-video/actions/workflows/build.yml)
+[![Movie Generated From Ai](https://github.com/paulocoutinhox/py-transcriptor-ai/actions/workflows/build.yml/badge.svg)](https://github.com/paulocoutinhox/py-transcriptor-ai/actions/workflows/build.yml)
 
 This is a nice software that generate subtitles for a video using Ai.
 
