@@ -56,7 +56,7 @@ python3 generate.py
 
 ## Sample
 
-https://github.com/paulocoutinhox/py-transcript-video/assets/395096/56beba7f-6fc7-44b4-8aa2-951f4f2371fd
+https://github.com/paulocoutinhox/py-transcriptor-ai/assets/395096/eafa7385-1fdd-447f-9711-210c3b722d3c
 
 ## Speed up video
 
